@@ -49,6 +49,7 @@ class HealthResponse(BaseModel):
     """Health check response"""
     status: str
     model_loaded: bool
+    voice_clone_loaded: bool
     voice_design_loaded: bool
     device: str
     model_name: str

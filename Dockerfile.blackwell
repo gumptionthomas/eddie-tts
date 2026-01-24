@@ -8,11 +8,14 @@ ENV PYTHONUNBUFFERED=1
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Install system dependencies
+# Install system dependencies and Python 3.12 from deadsnakes PPA
 RUN apt-get update && apt-get install -y \
+    software-properties-common \
+    && add-apt-repository -y ppa:deadsnakes/ppa \
+    && apt-get update && apt-get install -y \
     python3.12 \
     python3.12-venv \
-    python3-pip \
+    python3.12-dev \
     git \
     wget \
     curl \
@@ -64,7 +67,8 @@ ENV DTYPE=bfloat16
 ENV USE_FLASH_ATTENTION=true
 ENV MODEL_CACHE_DIR=/cache
 ENV VOICE_LIBRARY_DIR=/voices
-ENV MODEL_NAME=Qwen/Qwen3-TTS-12Hz-1.7B-Base
+ENV MODEL_NAME=Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice
+ENV VOICE_CLONE_MODEL=Qwen/Qwen3-TTS-12Hz-1.7B-Base
 ENV VOICE_DESIGN_MODEL=Qwen/Qwen3-TTS-12Hz-1.7B-VoiceDesign
 ENV HF_HOME=/cache
 

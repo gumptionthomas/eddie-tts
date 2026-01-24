@@ -5,7 +5,7 @@ Health check endpoints
 from fastapi import APIRouter
 from app.models import HealthResponse
 from app.config import Config
-from app.tts_model import is_model_loaded, is_voice_design_loaded
+from app.tts_model import is_model_loaded, is_voice_clone_loaded, is_voice_design_loaded
 
 router = APIRouter()
 
@@ -16,6 +16,7 @@ async def health_check():
     return HealthResponse(
         status="ok" if is_model_loaded() else "initializing",
         model_loaded=is_model_loaded(),
+        voice_clone_loaded=is_voice_clone_loaded(),
         voice_design_loaded=is_voice_design_loaded(),
         device=Config.DEVICE,
         model_name=Config.MODEL_NAME

@@ -15,9 +15,9 @@ from fastapi.responses import StreamingResponse
 from app.models import TTSRequest, VoiceCloneRequest, VoiceDesignRequest, ErrorResponse
 from app.config import Config
 from app.tts_model import (
-    get_base_model, get_voice_design_model,
     generate_custom_voice, generate_voice_clone, generate_voice_design,
-    is_model_loaded, is_voice_design_loaded, initialize_voice_design_model
+    is_model_loaded, is_voice_clone_loaded, is_voice_design_loaded,
+    initialize_voice_clone_model, initialize_voice_design_model
 )
 
 router = APIRouter()
@@ -153,10 +153,15 @@ async def text_to_speech_with_upload(
 ):
     """Generate speech by cloning the uploaded voice"""
 
-    if not is_model_loaded():
+    # Lazy load voice clone model
+    if not is_voice_clone_loaded():
+        print("Loading voice clone model on first use...")
+        await initialize_voice_clone_model()
+
+    if not is_voice_clone_loaded():
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail={"error": {"message": "Model not loaded yet", "type": "model_error"}}
+            detail={"error": {"message": "Voice clone model failed to load", "type": "model_error"}}
         )
 
     # Validate audio file

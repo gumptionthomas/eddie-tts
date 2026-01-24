@@ -10,9 +10,11 @@ import numpy as np
 from app.config import Config
 
 # Global model instances
-_base_model = None
-_voice_design_model = None
-_model_loading = False
+_custom_voice_model = None  # For built-in speakers
+_voice_clone_model = None   # For voice cloning
+_voice_design_model = None  # For voice design from description
+_custom_voice_loading = False
+_voice_clone_loading = False
 _voice_design_loading = False
 
 
@@ -27,14 +29,14 @@ def get_dtype():
 
 
 async def initialize_model():
-    """Initialize the base TTS model"""
-    global _base_model, _model_loading
+    """Initialize the CustomVoice model for built-in speakers"""
+    global _custom_voice_model, _custom_voice_loading
 
-    if _base_model is not None or _model_loading:
+    if _custom_voice_model is not None or _custom_voice_loading:
         return
 
-    _model_loading = True
-    print(f"Loading Qwen3-TTS model: {Config.MODEL_NAME}")
+    _custom_voice_loading = True
+    print(f"Loading Qwen3-TTS CustomVoice model: {Config.MODEL_NAME}")
     print(f"  Device: {Config.DEVICE}")
     print(f"  Dtype: {Config.DTYPE}")
     print(f"  Flash Attention: {Config.USE_FLASH_ATTENTION}")
@@ -50,14 +52,45 @@ async def initialize_model():
         if Config.USE_FLASH_ATTENTION:
             kwargs["attn_implementation"] = "flash_attention_2"
 
-        _base_model = Qwen3TTSModel.from_pretrained(Config.MODEL_NAME, **kwargs)
-        print(f"Base model loaded successfully")
+        _custom_voice_model = Qwen3TTSModel.from_pretrained(Config.MODEL_NAME, **kwargs)
+        print(f"CustomVoice model loaded successfully")
 
     except Exception as e:
-        print(f"Failed to load base model: {e}")
+        print(f"Failed to load CustomVoice model: {e}")
         raise
     finally:
-        _model_loading = False
+        _custom_voice_loading = False
+
+
+async def initialize_voice_clone_model():
+    """Initialize the Base model for voice cloning (lazy loaded)"""
+    global _voice_clone_model, _voice_clone_loading
+
+    if _voice_clone_model is not None or _voice_clone_loading:
+        return
+
+    _voice_clone_loading = True
+    print(f"Loading voice clone model: {Config.VOICE_CLONE_MODEL}")
+
+    try:
+        from qwen_tts import Qwen3TTSModel
+
+        kwargs = {
+            "device_map": Config.DEVICE,
+            "dtype": get_dtype(),
+        }
+
+        if Config.USE_FLASH_ATTENTION:
+            kwargs["attn_implementation"] = "flash_attention_2"
+
+        _voice_clone_model = Qwen3TTSModel.from_pretrained(Config.VOICE_CLONE_MODEL, **kwargs)
+        print(f"Voice clone model loaded successfully")
+
+    except Exception as e:
+        print(f"Failed to load voice clone model: {e}")
+        raise
+    finally:
+        _voice_clone_loading = False
 
 
 async def initialize_voice_design_model():
@@ -91,9 +124,14 @@ async def initialize_voice_design_model():
         _voice_design_loading = False
 
 
-def get_base_model():
-    """Get the base TTS model"""
-    return _base_model
+def get_custom_voice_model():
+    """Get the CustomVoice model for built-in speakers"""
+    return _custom_voice_model
+
+
+def get_voice_clone_model():
+    """Get the Base model for voice cloning"""
+    return _voice_clone_model
 
 
 def get_voice_design_model():
@@ -102,8 +140,13 @@ def get_voice_design_model():
 
 
 def is_model_loaded() -> bool:
-    """Check if base model is loaded"""
-    return _base_model is not None
+    """Check if CustomVoice model is loaded"""
+    return _custom_voice_model is not None
+
+
+def is_voice_clone_loaded() -> bool:
+    """Check if voice clone model is loaded"""
+    return _voice_clone_model is not None
 
 
 def is_voice_design_loaded() -> bool:
@@ -129,8 +172,8 @@ def generate_custom_voice(
     Returns:
         Tuple of (audio_array, sample_rate)
     """
-    if _base_model is None:
-        raise RuntimeError("Model not loaded")
+    if _custom_voice_model is None:
+        raise RuntimeError("CustomVoice model not loaded")
 
     if speaker not in Config.SPEAKERS:
         print(f"Warning: Unknown speaker '{speaker}', using default '{Config.DEFAULT_SPEAKER}'")
@@ -146,7 +189,7 @@ def generate_custom_voice(
         kwargs["instruct"] = instruct
 
     with torch.no_grad():
-        wavs, sr = _base_model.generate_custom_voice(**kwargs)
+        wavs, sr = _custom_voice_model.generate_custom_voice(**kwargs)
 
     # Return first audio (batch size 1)
     return wavs[0], sr
@@ -172,8 +215,8 @@ def generate_voice_clone(
     Returns:
         Tuple of (audio_array, sample_rate)
     """
-    if _base_model is None:
-        raise RuntimeError("Model not loaded")
+    if _voice_clone_model is None:
+        raise RuntimeError("Voice clone model not loaded")
 
     kwargs = {
         "text": text,
@@ -188,7 +231,7 @@ def generate_voice_clone(
         kwargs["x_vector_only_mode"] = True
 
     with torch.no_grad():
-        wavs, sr = _base_model.generate_voice_clone(**kwargs)
+        wavs, sr = _voice_clone_model.generate_voice_clone(**kwargs)
 
     return wavs[0], sr
 

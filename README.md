@@ -133,9 +133,27 @@ speech_clone(
 
 | Model | VRAM |
 |-------|------|
-| 0.6B | ~4GB |
-| 1.7B | ~8GB |
+| 0.6B CustomVoice | ~4GB |
+| 1.7B CustomVoice | ~8GB |
+| 1.7B + Voice Clone | ~12GB |
 | 1.7B + Voice Design | ~16GB |
+
+## Model Variants
+
+The Qwen3-TTS family has different model variants for different use cases:
+
+| Model | Use Case | Method |
+|-------|----------|--------|
+| **CustomVoice** (default) | 9 built-in speakers | `generate_custom_voice()` |
+| **Base** | Voice cloning from audio | `generate_voice_clone()` |
+| **VoiceDesign** | Create voice from description | `generate_voice_design()` |
+
+This API uses CustomVoice by default and lazy-loads Base/VoiceDesign on first use.
+
+## Tested
+
+- RTX 5060 Ti (Blackwell, 16GB VRAM) with CUDA 12.8 / PyTorch 2.7+
+- Generation time: ~5 seconds for a sentence
 
 ## License
 

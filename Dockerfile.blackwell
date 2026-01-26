@@ -64,7 +64,7 @@ ENV PORT=4123
 ENV HOST=0.0.0.0
 ENV DEVICE=cuda:0
 ENV DTYPE=bfloat16
-ENV USE_FLASH_ATTENTION=true
+ENV USE_FLASH_ATTENTION=false
 ENV MODEL_CACHE_DIR=/cache
 ENV VOICE_LIBRARY_DIR=/voices
 ENV MODEL_NAME=Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice
@@ -72,8 +72,13 @@ ENV VOICE_CLONE_MODEL=Qwen/Qwen3-TTS-12Hz-1.7B-Base
 ENV VOICE_DESIGN_MODEL=Qwen/Qwen3-TTS-12Hz-1.7B-VoiceDesign
 ENV HF_HOME=/cache
 
-# Expose port
+# Gradio UI settings (set ENABLE_GRADIO=true to use)
+ENV ENABLE_GRADIO=false
+ENV GRADIO_PORT=7860
+
+# Expose ports (API and Gradio)
 EXPOSE ${PORT}
+EXPOSE ${GRADIO_PORT}
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=30s --start-period=5m --retries=3 \

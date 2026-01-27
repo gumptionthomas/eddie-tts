@@ -20,26 +20,28 @@ Part of the [cornball-ai](https://github.com/cornball-ai) ecosystem, designed to
 ```bash
 # For older GPUs (Ampere, Ada Lovelace)
 docker build -t qwen3-tts-api .
-docker run -d --gpus all -p 7812:4123 \
+docker run -d --gpus all --network=host --name qwen3-tts-api \
   -v ~/.cache/huggingface:/cache \
+  -e PORT=7812 \
   qwen3-tts-api
 
 # For Blackwell GPUs (RTX 50xx)
 docker build -f Dockerfile.blackwell -t qwen3-tts-api:blackwell .
-docker run -d --gpus all -p 7812:4123 \
+docker run -d --gpus all --network=host --name qwen3-tts-api \
   -v ~/.cache/huggingface:/cache \
+  -e PORT=7812 \
   -e USE_FLASH_ATTENTION=false \
   qwen3-tts-api:blackwell
 ```
 
-**Port convention:** We map to external port 7812 (the standard tts.api port) from internal 4123.
+**Note:** We use `--network=host` for reliable DNS resolution (HuggingFace model downloads). The `PORT=7812` env var sets the server port directly.
 
 ### Gradio UI Mode
 
 Run the official Qwen3-TTS Gradio demo instead of the API server:
 
 ```bash
-docker run -d --gpus all -p 7860:7860 \
+docker run -d --gpus all --network=host --name qwen3-tts-gradio \
   -v ~/.cache/huggingface:/cache \
   -e ENABLE_GRADIO=true \
   -e USE_FLASH_ATTENTION=false \

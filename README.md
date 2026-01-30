@@ -245,10 +245,16 @@ The Qwen3-TTS family has different model variants for different use cases:
 
 This API uses CustomVoice by default and lazy-loads Base/VoiceDesign on first use.
 
+## Startup Times
+
+| Type | Time |
+|------|------|
+| Cold start (loading models) | ~45-60s |
+| Warm request (model loaded) | ~5s per sentence |
+
 ## Tested
 
 - RTX 5060 Ti (Blackwell, 16GB VRAM) with CUDA 12.8 / PyTorch 2.7+
-- Generation time: ~5 seconds for a sentence
 
 ## License
 

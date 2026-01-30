@@ -22,6 +22,10 @@ class Config:
     DTYPE = os.getenv("DTYPE", "bfloat16")  # bfloat16, float16, float32
     USE_FLASH_ATTENTION = os.getenv("USE_FLASH_ATTENTION", "true").lower() == "true"
 
+    # Model download settings
+    # Set to true to prevent auto-downloading models (requires pre-downloaded weights)
+    LOCAL_FILES_ONLY = os.getenv("LOCAL_FILES_ONLY", "true").lower() == "true"
+
     # Cache settings
     MODEL_CACHE_DIR = os.getenv("MODEL_CACHE_DIR", "/cache")
     VOICE_LIBRARY_DIR = os.getenv("VOICE_LIBRARY_DIR", "/voices")

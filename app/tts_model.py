@@ -47,6 +47,7 @@ async def initialize_model():
         kwargs = {
             "device_map": Config.DEVICE,
             "dtype": get_dtype(),
+            "local_files_only": Config.LOCAL_FILES_ONLY,
         }
 
         if Config.USE_FLASH_ATTENTION:
@@ -78,6 +79,7 @@ async def initialize_voice_clone_model():
         kwargs = {
             "device_map": Config.DEVICE,
             "dtype": get_dtype(),
+            "local_files_only": Config.LOCAL_FILES_ONLY,
         }
 
         if Config.USE_FLASH_ATTENTION:
@@ -109,6 +111,7 @@ async def initialize_voice_design_model():
         kwargs = {
             "device_map": Config.DEVICE,
             "dtype": get_dtype(),
+            "local_files_only": Config.LOCAL_FILES_ONLY,
         }
 
         if Config.USE_FLASH_ATTENTION:

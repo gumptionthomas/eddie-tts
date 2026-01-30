@@ -195,6 +195,34 @@ See [tts.api](https://github.com/cornball-ai/tts.api) for full documentation.
 | `MODEL_NAME` | Qwen/Qwen3-TTS-12Hz-1.7B-Base | Base model |
 | `VOICE_DESIGN_MODEL` | Qwen/Qwen3-TTS-12Hz-1.7B-VoiceDesign | Voice design model |
 | `MODEL_CACHE_DIR` | /cache | HuggingFace cache directory |
+| `LOCAL_FILES_ONLY` | true | Prevent auto-downloading models (requires pre-downloaded weights) |
+
+## Pre-downloading Models
+
+By default, `LOCAL_FILES_ONLY=true` prevents automatic model downloads. You must pre-download models before running the container.
+
+**Models required:**
+- `Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice` - Built-in speakers (~7GB)
+- `Qwen/Qwen3-TTS-12Hz-1.7B-Base` - Voice cloning (~7GB)
+- `Qwen/Qwen3-TTS-12Hz-1.7B-VoiceDesign` - Voice design (~7GB)
+
+**Download with Python:**
+```bash
+pip install huggingface_hub
+python -c "from huggingface_hub import snapshot_download; \
+  snapshot_download('Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice'); \
+  snapshot_download('Qwen/Qwen3-TTS-12Hz-1.7B-Base'); \
+  snapshot_download('Qwen/Qwen3-TTS-12Hz-1.7B-VoiceDesign')"
+```
+
+**Download with R:**
+```r
+hfhub::hub_snapshot("Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice")
+hfhub::hub_snapshot("Qwen/Qwen3-TTS-12Hz-1.7B-Base")
+hfhub::hub_snapshot("Qwen/Qwen3-TTS-12Hz-1.7B-VoiceDesign")
+```
+
+To enable auto-download (not recommended), set `LOCAL_FILES_ONLY=false`.
 
 ## GPU Requirements
 

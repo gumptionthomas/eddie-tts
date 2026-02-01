@@ -222,6 +222,13 @@ hfhub::hub_snapshot("Qwen/Qwen3-TTS-12Hz-1.7B-Base")
 hfhub::hub_snapshot("Qwen/Qwen3-TTS-12Hz-1.7B-VoiceDesign")
 ```
 
+**Fixing permissions:** If Docker previously created cache directories with root ownership, you may get permission errors when downloading. Fix with:
+```bash
+sudo chown -R $USER:$USER ~/.cache/huggingface/hub/models--Qwen--Qwen3-TTS-*
+```
+
+**Note on hfhub (R):** The R `hfhub` package creates absolute symlinks pointing to `/home/USER/.cache/huggingface`. The Dockerfile includes a workaround symlink, but it's hardcoded to `/home/troy`. If you use a different username, either rebuild with your username or use Python's `huggingface_hub` which creates relative symlinks.
+
 To enable auto-download (not recommended), set `LOCAL_FILES_ONLY=false`.
 
 ## GPU Requirements

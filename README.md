@@ -15,26 +15,34 @@ Part of the [cornball-ai](https://github.com/cornball-ai) ecosystem, designed to
 
 ## Quick Start
 
-### Docker (Recommended)
+### One-Liner Install
+
+```bash
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/cornball-ai/qwen3-tts-api/main/install.sh)"
+```
+
+Auto-detects your GPU, downloads models, and starts the server on port 7811. Requires: Docker, NVIDIA GPU, nvidia-container-toolkit.
+
+### Docker (Manual)
 
 ```bash
 # For older GPUs (Ampere, Ada Lovelace)
 docker build -t qwen3-tts-api .
 docker run -d --gpus all --network=host --name qwen3-tts-api \
   -v ~/.cache/huggingface:/cache \
-  -e PORT=7812 \
+  -e PORT=7811 \
   qwen3-tts-api
 
 # For Blackwell GPUs (RTX 50xx)
 docker build -f Dockerfile.blackwell -t qwen3-tts-api:blackwell .
 docker run -d --gpus all --network=host --name qwen3-tts-api \
   -v ~/.cache/huggingface:/cache \
-  -e PORT=7812 \
+  -e PORT=7811 \
   -e USE_FLASH_ATTENTION=false \
   qwen3-tts-api:blackwell
 ```
 
-**Note:** We use `--network=host` for reliable DNS resolution (HuggingFace model downloads). The `PORT=7812` env var sets the server port directly.
+**Note:** We use `--network=host` for reliable DNS resolution (HuggingFace model downloads). The `PORT=7811` env var sets the server port directly.
 
 ### Gradio UI Mode
 
@@ -72,7 +80,7 @@ python main.py
 ### Generate Speech (Built-in Voices)
 
 ```bash
-curl -X POST http://localhost:7812/v1/audio/speech \
+curl -X POST http://localhost:7811/v1/audio/speech \
   -H "Content-Type: application/json" \
   -d '{
     "input": "Hello, world!",
@@ -88,7 +96,7 @@ Two modes available:
 **High-quality (ICL mode)** - requires transcript of reference audio:
 
 ```bash
-curl -X POST http://localhost:7812/v1/audio/speech/upload \
+curl -X POST http://localhost:7811/v1/audio/speech/upload \
   -F "input=Hello, this is my cloned voice!" \
   -F "voice_file=@reference.wav" \
   -F "ref_text=This is the transcript of my reference audio." \
@@ -99,7 +107,7 @@ curl -X POST http://localhost:7812/v1/audio/speech/upload \
 **Fast mode (x-vector only)** - no transcript needed, lower quality:
 
 ```bash
-curl -X POST http://localhost:7812/v1/audio/speech/upload \
+curl -X POST http://localhost:7811/v1/audio/speech/upload \
   -F "input=Hello, this is my cloned voice!" \
   -F "voice_file=@reference.wav" \
   -F "x_vector_only=true" \
@@ -120,7 +128,7 @@ curl -X POST http://localhost:7812/v1/audio/speech/upload \
 ### Voice Design (Generate from Description)
 
 ```bash
-curl -X POST http://localhost:7812/v1/audio/speech/design \
+curl -X POST http://localhost:7811/v1/audio/speech/design \
   -H "Content-Type: application/json" \
   -d '{
     "input": "Hello, I am a custom designed voice!",
@@ -132,20 +140,20 @@ curl -X POST http://localhost:7812/v1/audio/speech/design \
 ### List Voices
 
 ```bash
-curl http://localhost:7812/v1/voices
+curl http://localhost:7811/v1/voices
 ```
 
 ### Health Check
 
 ```bash
-curl http://localhost:7812/health
+curl http://localhost:7811/health
 ```
 
 ## R Usage (tts.api)
 
 ```r
 library(tts.api)
-set_tts_base("http://localhost:7812")
+set_tts_base("http://localhost:7811")
 
 # Check if qwen3-tts is running
 qwen3_available()  # TRUE

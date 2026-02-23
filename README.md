@@ -58,6 +58,16 @@ docker run -d --gpus all --network=host --name qwen3-tts-gradio \
 
 Then open http://localhost:7860 in your browser.
 
+### LXC Install (Proxmox)
+
+Deploy in a Proxmox LXC container with GPU passthrough:
+
+```bash
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/cornball-ai/qwen3-tts-api/main/install-lxc.sh)"
+```
+
+Run this on the Proxmox host. Creates a privileged LXC container with NVIDIA GPU passthrough, Docker, and the qwen3-tts-api service with auto-start. Requires: Proxmox, NVIDIA GPU with driver installed on host.
+
 ### Local Installation
 
 ```bash

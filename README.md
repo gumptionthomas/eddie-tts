@@ -1,286 +1,269 @@
-# qwen3-tts-api
+# eddie
 
-> **This repo provides:** A Dockerfile and FastAPI server that wraps [Qwen3-TTS](https://github.com/QwenLM/Qwen3-TTS) with OpenAI-compatible REST endpoints. The original Qwen3-TTS is a Python library - this repo containerizes it for easy deployment.
+> A local, **OpenAI-compatible Qwen3-TTS speech server** — FastAPI, with voice cloning,
+> voice design, reproducible seeds, and sampling temperature. Runs natively on
+> Windows + NVIDIA Blackwell (RTX 50-series) with `torch.compile`, and on Linux/Docker.
+> Text goes in, audio comes out. Nothing leaves your machine.
 
-Part of the [cornball-ai](https://github.com/cornball-ai) ecosystem, designed to work with the [tts.api](https://github.com/cornball-ai/tts.api) R package for text-to-speech generation.
+*Eddie is the Heart of Gold's shipboard computer — the one that talks. He's the voice;
+[ZaphodVox](https://github.com/gumptionthomas/zaphodvox) is the one giving the orders.*
 
-## Features
+**Keywords:** Qwen3-TTS · text-to-speech · TTS server · speech synthesis · voice cloning ·
+voice design · OpenAI-compatible API · FastAPI · self-hosted · local-first · CUDA · Blackwell
 
-- **OpenAI-compatible API**: Drop-in replacement for OpenAI TTS endpoints
-- **9 Built-in Voices**: Vivian, Serena, Uncle_Fu, Dylan, Eric, Ryan, Aiden, Ono_Anna, Sohee
-- **Voice Cloning**: Clone any voice from a 3-second audio sample
-- **Voice Design**: Generate custom voices from natural language descriptions
-- **10 Languages**: Chinese, English, Japanese, Korean, German, French, Russian, Portuguese, Spanish, Italian
-- **Blackwell GPU Support**: Optimized for RTX 50xx series
+---
 
-## Quick Start
+## What this is
 
-### One-Liner Install
+A thin HTTP wrapper around the open-weight [Qwen3-TTS](https://github.com/QwenLM/Qwen3-TTS)
+models, exposing OpenAI-style speech endpoints. Point any client at it and get audio back.
 
-```bash
-bash -c "$(curl -fsSL https://raw.githubusercontent.com/cornball-ai/qwen3-tts-api/main/install.sh)"
+It's a fork of [cornball-ai/qwen3-tts-api](https://github.com/cornball-ai/qwen3-tts-api)
+(see [Credits](#credits--license)). **This fork adds `seed` and `temperature`** — two
+generation controls upstream does not have.
+
+### Why this fork exists
+
+[ZaphodVox](https://github.com/gumptionthomas/zaphodvox), a CLI for encoding manuscripts
+into narrated audio, depends on both:
+
+- `--voice-seed` → this server's **`seed`** parameter (reproducible synthesis)
+- `--voice-temperature` → this server's **`temperature`** parameter
+
+Upstream supports neither, so those flags silently do nothing against it. **If you're
+running ZaphodVox, run Eddie.** See [Changes from upstream](#changes-from-upstream).
+
+---
+
+## Quick start
+
+### Windows + Blackwell (native, no Docker)
+
+The path this fork is tuned for. See **[WINDOWS.md](WINDOWS.md)** for the full story
+(cu128 PyTorch, `triton-windows`, the `torch.compile` workarounds).
+
+```powershell
+.\windows\start_server.ps1     # sets env, resolves ffmpeg/sox, runs foreground
+.\windows\stop_server.ps1
 ```
 
-Auto-detects your GPU, downloads models, and starts the server on port 7811. Requires: Docker, NVIDIA GPU, nvidia-container-toolkit.
+Binds `0.0.0.0:4123` (LAN-reachable). ZaphodVox defaults to `http://127.0.0.1:4123`, so
+they line up out of the box.
 
-### Docker (Manual)
+### Local install (any platform)
 
-```bash
-# For older GPUs (Ampere, Ada Lovelace)
-docker build -t qwen3-tts-api .
-docker run -d --gpus all --network=host --name qwen3-tts-api \
-  -v ~/.cache/huggingface:/cache \
-  -e PORT=7811 \
-  qwen3-tts-api
-
-# For Blackwell GPUs (RTX 50xx)
-docker build -f Dockerfile.blackwell -t qwen3-tts-api:blackwell .
-docker run -d --gpus all --network=host --name qwen3-tts-api \
-  -v ~/.cache/huggingface:/cache \
-  -e PORT=7811 \
-  -e USE_FLASH_ATTENTION=false \
-  qwen3-tts-api:blackwell
-```
-
-**Note:** We use `--network=host` for reliable DNS resolution (HuggingFace model downloads). The `PORT=7811` env var sets the server port directly.
-
-### Gradio UI Mode
-
-Run the official Qwen3-TTS Gradio demo instead of the API server:
+Install a CUDA build of PyTorch **first** — Blackwell (sm_120) needs cu128; cu121 lacks
+the kernels.
 
 ```bash
-docker run -d --gpus all --network=host --name qwen3-tts-gradio \
-  -v ~/.cache/huggingface:/cache \
-  -e ENABLE_GRADIO=true \
-  -e USE_FLASH_ATTENTION=false \
-  qwen3-tts-api:blackwell
-```
-
-Then open http://localhost:7860 in your browser.
-
-### LXC Install (Proxmox)
-
-Deploy in a Proxmox LXC container with GPU passthrough:
-
-```bash
-bash -c "$(curl -fsSL https://raw.githubusercontent.com/cornball-ai/qwen3-tts-api/main/install-lxc.sh)"
-```
-
-Run this on the Proxmox host. Creates a privileged LXC container with NVIDIA GPU passthrough, Docker, and the qwen3-tts-api service with auto-start. Requires: Proxmox, NVIDIA GPU with driver installed on host.
-
-### Local Installation
-
-```bash
-# Install PyTorch (adjust for your CUDA version)
-pip install torch torchaudio --index-url https://download.pytorch.org/whl/cu124
-
-# Install Qwen3-TTS and dependencies
+pip install torch torchaudio --index-url https://download.pytorch.org/whl/cu128
 pip install qwen-tts
 pip install -r requirements.txt
-
-# Optional: Flash Attention for reduced memory
-pip install flash-attn --no-build-isolation
-
-# Run server
 python main.py
 ```
 
-## API Endpoints
+On Windows, skip `flash-attn` (it doesn't build) and set `USE_FLASH_ATTENTION=false`;
+the server falls back to `attn_implementation="sdpa"`.
 
-### Generate Speech (Built-in Voices)
+### Docker
 
 ```bash
-curl -X POST http://localhost:7811/v1/audio/speech \
+# Ampere / Ada
+docker build -t eddie . && docker run -d --gpus all --network=host \
+  -v ~/.cache/huggingface:/cache -e PORT=4123 eddie
+
+# Blackwell (RTX 50xx)
+docker build -f Dockerfile.blackwell -t eddie:blackwell . && docker run -d --gpus all \
+  --network=host -v ~/.cache/huggingface:/cache -e PORT=4123 \
+  -e USE_FLASH_ATTENTION=false eddie:blackwell
+```
+
+`--network=host` gives reliable DNS for HuggingFace downloads. A Proxmox LXC installer
+(`install-lxc.sh`) and a Gradio UI mode (`ENABLE_GRADIO=true`, port 7860) are inherited
+from upstream.
+
+---
+
+## API
+
+Three synthesis endpoints. All accept `seed` and `temperature`.
+
+| Endpoint | Picks the voice by | Style control |
+|---|---|---|
+| `POST /v1/audio/speech` | built-in `voice` (Ryan, Vivian, …) | `instruct` |
+| `POST /v1/audio/speech/upload` | your `voice_file` reference clip | the reference clip itself |
+| `POST /v1/audio/speech/design` | `voice_description` text | the description itself |
+
+Plus `GET /v1/voices` and `GET /health`.
+
+### Built-in voices
+
+`Vivian` · `Serena` · `Uncle_Fu` · `Dylan` · `Eric` · `Ryan` · `Aiden` · `Ono_Anna` · `Sohee`
+
+**Languages:** English, Chinese, Japanese, Korean, German, French, Russian, Portuguese,
+Spanish, Italian.
+
+### Built-in voice
+
+```bash
+curl -X POST http://localhost:4123/v1/audio/speech \
   -H "Content-Type: application/json" \
-  -d '{
-    "input": "Hello, world!",
-    "voice": "Vivian",
-    "language": "English"
-  }' --output speech.wav
+  -d '{"input":"Hello, world!","voice":"Ryan","language":"English",
+       "instruct":"calm narrator","seed":42,"temperature":0.65}' \
+  --output speech.wav
 ```
 
-### Voice Cloning
+### Voice cloning
 
-Two modes available:
-
-**High-quality (ICL mode)** - requires transcript of reference audio:
+**ICL mode** (higher quality) — supply the reference transcript:
 
 ```bash
-curl -X POST http://localhost:7811/v1/audio/speech/upload \
-  -F "input=Hello, this is my cloned voice!" \
+curl -X POST http://localhost:4123/v1/audio/speech/upload \
+  -F "input=Hello, this is my cloned voice." \
   -F "voice_file=@reference.wav" \
-  -F "ref_text=This is the transcript of my reference audio." \
-  -F "language=English" \
-  --output cloned.wav
+  -F "ref_text=Transcript of the reference audio." \
+  -F "seed=42" -F "temperature=0.65" --output cloned.wav
 ```
 
-**Fast mode (x-vector only)** - no transcript needed, lower quality:
-
-```bash
-curl -X POST http://localhost:7811/v1/audio/speech/upload \
-  -F "input=Hello, this is my cloned voice!" \
-  -F "voice_file=@reference.wav" \
-  -F "x_vector_only=true" \
-  -F "language=English" \
-  --output cloned.wav
-```
+**x-vector mode** (faster, no transcript) — add `-F "x_vector_only=true"` and drop `ref_text`.
 
 | Parameter | Required | Description |
-|-----------|----------|-------------|
-| `input` | Yes | Text to synthesize |
-| `voice_file` | Yes | Reference audio file (3+ seconds recommended) |
-| `language` | No | Target language (default: English) |
-| `ref_text` | No* | Transcript of reference audio (for ICL mode) |
-| `x_vector_only` | No | Set to "true" for fast mode without transcript |
+|---|---|---|
+| `input` | yes | Text to synthesize |
+| `voice_file` | yes | Reference audio (3+ seconds recommended) |
+| `ref_text` | no* | Transcript of the reference audio (enables ICL mode) |
+| `x_vector_only` | no | `true` for fast mode without a transcript |
+| `language` | no | Default `English` |
+| `seed` / `temperature` | no | See below |
 
-*Either `ref_text` or `x_vector_only=true` should be provided.
+\* Provide either `ref_text` or `x_vector_only=true`.
 
-### Voice Design (Generate from Description)
+### Voice design
 
 ```bash
-curl -X POST http://localhost:7811/v1/audio/speech/design \
+curl -X POST http://localhost:4123/v1/audio/speech/design \
   -H "Content-Type: application/json" \
-  -d '{
-    "input": "Hello, I am a custom designed voice!",
-    "language": "English",
-    "voice_description": "A warm, friendly female voice with a slight British accent"
-  }' --output designed.wav
+  -d '{"input":"Hello there, welcome in.",
+       "voice_description":"warm gravelly older man, unhurried","seed":42}' \
+  --output designed.wav
 ```
 
-### List Voices
+---
 
-```bash
-curl http://localhost:7811/v1/voices
-```
+## Generation parameters
 
-### Health Check
+### `seed` (int, optional)
 
-```bash
-curl http://localhost:7811/health
-```
+Reproducible synthesis. Same seed + same inputs → **byte-identical audio**. Omit it and
+each call varies. Seeds the global torch RNG immediately before generation (the
+`qwen_tts` sampler draws from it).
 
-## R Usage (tts.api)
+### `temperature` (float, default `0.65`)
 
-```r
-library(tts.api)
-set_tts_base("http://localhost:7811")
+**This is a run-to-run variability knob, not an expressiveness dial.** Low values make
+successive renders of the same text more alike; high values make them differ more. Same
+voice, same words — it only nudges delivery and timing. Measured on an RTX 5080:
 
-# Check if qwen3-tts is running
-qwen3_available()  # TRUE
+| temperature | cross-seed pitch divergence | duration spread |
+|---|---|---|
+| 0.1 | 44.7 Hz | 8.9s vs 9.3s |
+| 0.9 | 57.9 Hz | 12.0s vs 10.7s |
+| 1.5 | 60.7 Hz | 10.0s vs 13.9s |
 
-# Generate speech with built-in voice
-speech("Hello world!", voice = "Vivian", file = "hello.wav", backend = "qwen3")
+Variability rises monotonically with temperature, but `0.3` vs `1.0` on the same sentence
+is barely distinguishable by ear. The default of **`0.65`** is tuned for steady narration
+(Qwen's own default is ~`0.9`).
 
-# Voice cloning - fast mode (no transcript needed)
-speech_clone(
-  input = "Hello with my cloned voice!",
-  voice_file = "reference.wav",
-  x_vector_only = TRUE,
-  file = "cloned.wav",
-  backend = "qwen3"
-)
+### Controlling *style*, not variability
 
-# Voice cloning - high quality (with transcript)
-speech_clone(
-  input = "Hello with my cloned voice!",
-  voice_file = "reference.wav",
-  ref_text = "This is what I said in the reference audio.",
-  file = "cloned.wav",
-  backend = "qwen3"
-)
+For actual "flat vs dramatic," use the style channel, not temperature:
 
-# Voice design (create voice from description)
-speech_design(
-  input = "Hello, I am your assistant!",
-  voice_description = "A warm, professional female voice",
-  file = "designed.wav"
-)
-```
+- **`instruct`** — preset voices only. e.g. `"depressed, morose"`, `"bright and eager"`.
+- **`voice_description`** — the design endpoint. *"warm gravelly older man"* vs *"bright
+  cheerful young woman"* yields **117 Hz vs 357 Hz** mean pitch, from the description alone.
+- **Cloned voices: change the reference clip.** `instruct` is **silently ignored** on the
+  clone path — passing it produces byte-identical audio. The clone model takes *all* of its
+  style, timbre and delivery both, from the reference. Match the reference's mood to what
+  you want out.
 
-See [tts.api](https://github.com/cornball-ai/tts.api) for full documentation.
+---
 
-## Environment Variables
+## Changes from upstream
+
+Per Apache 2.0 §4(b), the modifications in this fork:
+
+- **`seed`** on all three synthesis endpoints (new).
+- **`temperature`** on all three synthesis endpoints (new), default `0.65`.
+- **`torch.compile`** on the talker decoder + code predictor — the autoregressive decode
+  loop is launch-bound in eager mode (RTF ≈ 1.9×); compiled it runs **faster than realtime
+  (RTF ≈ 0.6×)**, roughly a 3× speedup. Warmed up once at startup.
+- **Windows `torch.compile` workarounds** — short TorchInductor cache dir (`MAX_PATH`),
+  non-descriptive kernel names, static CUDA launcher disabled (32-bit pointer overflow).
+- **Single dedicated inference thread**, so compiled kernels are reused instead of
+  recompiled per request.
+- **`windows/`** — PowerShell launch/stop scripts and a PowerShell cheat sheet.
+- Quieted the per-generation `pad_token_id` log line; prefer the local HF cache and
+  disable the HuggingFace telemetry ping at startup.
+- Docs: examples use the actual default port `4123` (upstream's examples said `7811`).
+
+## Environment variables
 
 | Variable | Default | Description |
-|----------|---------|-------------|
-| `PORT` | 4123 | API server port |
-| `HOST` | 0.0.0.0 | Server host |
-| `ENABLE_GRADIO` | false | Launch Gradio UI instead of API server |
-| `GRADIO_PORT` | 7860 | Gradio UI port (when ENABLE_GRADIO=true) |
-| `DEVICE` | cuda:0 | PyTorch device |
-| `DTYPE` | bfloat16 | Model dtype (bfloat16, float16, float32) |
-| `USE_FLASH_ATTENTION` | true | Enable Flash Attention 2 (set false for Blackwell) |
-| `MODEL_NAME` | Qwen/Qwen3-TTS-12Hz-1.7B-Base | Base model |
-| `VOICE_DESIGN_MODEL` | Qwen/Qwen3-TTS-12Hz-1.7B-VoiceDesign | Voice design model |
-| `MODEL_CACHE_DIR` | /cache | HuggingFace cache directory |
-| `LOCAL_FILES_ONLY` | true | Prevent auto-downloading models (requires pre-downloaded weights) |
+|---|---|---|
+| `PORT` | `4123` | API server port |
+| `HOST` | `0.0.0.0` | Bind address |
+| `DEVICE` | `cuda:0` | PyTorch device |
+| `DTYPE` | `bfloat16` | `bfloat16`, `float16`, `float32` |
+| `USE_FLASH_ATTENTION` | `true` | Set `false` on Windows/Blackwell → uses `sdpa` |
+| `COMPILE_MODEL` | `true` | `torch.compile` the decoder (this fork) |
+| `TORCHINDUCTOR_CACHE_DIR` | — | Set short (e.g. `C:\ti`) on Windows |
+| `LOCAL_FILES_ONLY` | `true` | Load models from cache only; no re-download |
+| `MODEL_CACHE_DIR` | `/cache` | HuggingFace cache directory |
+| `ENABLE_GRADIO` | `false` | Launch the Gradio UI instead of the API |
 
-## Pre-downloading Models
+> **Note:** do **not** set `HF_HUB_OFFLINE` / `TRANSFORMERS_OFFLINE`. `qwen_tts` makes a
+> `model_info` call with no cache fallback, so hard offline mode crashes model load.
+> Inference is fully local regardless — no text or audio ever leaves the machine; only
+> benign model-metadata checks reach HuggingFace at startup.
 
-By default, `LOCAL_FILES_ONLY=true` prevents automatic model downloads. You must pre-download models before running the container.
+## Models
 
-**Models required:**
-- `Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice` - Built-in speakers (~7GB)
-- `Qwen/Qwen3-TTS-12Hz-1.7B-Base` - Voice cloning (~7GB)
-- `Qwen/Qwen3-TTS-12Hz-1.7B-VoiceDesign` - Voice design (~7GB)
+Lazy-loaded on first use of the matching endpoint.
 
-**Download with Python:**
+| Model | Use | VRAM |
+|---|---|---|
+| `Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice` | built-in speakers (default) | ~8 GB |
+| `Qwen/Qwen3-TTS-12Hz-1.7B-Base` | voice cloning | +~4 GB |
+| `Qwen/Qwen3-TTS-12Hz-1.7B-VoiceDesign` | voice design | +~4 GB |
+
+Pre-download them:
+
 ```bash
-pip install huggingface_hub
 python -c "from huggingface_hub import snapshot_download; \
-  snapshot_download('Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice'); \
-  snapshot_download('Qwen/Qwen3-TTS-12Hz-1.7B-Base'); \
-  snapshot_download('Qwen/Qwen3-TTS-12Hz-1.7B-VoiceDesign')"
+  [snapshot_download(f'Qwen/Qwen3-TTS-12Hz-1.7B-{m}') \
+   for m in ('CustomVoice','Base','VoiceDesign')]"
 ```
 
-**Download with R:**
-```r
-hfhub::hub_snapshot("Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice")
-hfhub::hub_snapshot("Qwen/Qwen3-TTS-12Hz-1.7B-Base")
-hfhub::hub_snapshot("Qwen/Qwen3-TTS-12Hz-1.7B-VoiceDesign")
-```
+## Performance
 
-**Fixing permissions:** If Docker previously created cache directories with root ownership, you may get permission errors when downloading. Fix with:
-```bash
-sudo chown -R $USER:$USER ~/.cache/huggingface/hub/models--Qwen--Qwen3-TTS-*
-```
+| | |
+|---|---|
+| Cold start (load + compile warmup) | ~60–90 s |
+| Generation, compiled | RTF ≈ **0.6×** (faster than realtime) |
+| Generation, eager | RTF ≈ 1.9× |
 
-**Note on hfhub (R):** The R `hfhub` package creates absolute symlinks pointing to `/home/USER/.cache/huggingface`. The Dockerfile includes a workaround symlink, but it's hardcoded to `/home/troy`. If you use a different username, either rebuild with your username or use Python's `huggingface_hub` which creates relative symlinks.
+Measured on an RTX 5080 (Blackwell, 16 GB, sm_120), CUDA 12.8 / PyTorch 2.9, `sdpa`.
 
-To enable auto-download (not recommended), set `LOCAL_FILES_ONLY=false`.
+---
 
-## GPU Requirements
+## Credits & license
 
-| Model | VRAM |
-|-------|------|
-| 0.6B CustomVoice | ~4GB |
-| 1.7B CustomVoice | ~8GB |
-| 1.7B + Voice Clone | ~12GB |
-| 1.7B + Voice Design | ~16GB |
+- **Models:** [Qwen3-TTS](https://github.com/QwenLM/Qwen3-TTS) by QwenLM (Alibaba).
+- **Upstream server:** [cornball-ai/qwen3-tts-api](https://github.com/cornball-ai/qwen3-tts-api)
+  — the FastAPI wrapper, OpenAI-compatible endpoint design, Dockerfiles, and LXC installer
+  are theirs. Eddie is a fork of it; see [Changes from upstream](#changes-from-upstream).
+  Upstream also ships an [R client, `tts.api`](https://github.com/cornball-ai/tts.api).
+- **Client:** [ZaphodVox](https://github.com/gumptionthomas/zaphodvox) — the CLI this
+  server was tuned for.
 
-## Model Variants
-
-The Qwen3-TTS family has different model variants for different use cases:
-
-| Model | Use Case | Method |
-|-------|----------|--------|
-| **CustomVoice** (default) | 9 built-in speakers | `generate_custom_voice()` |
-| **Base** | Voice cloning from audio | `generate_voice_clone()` |
-| **VoiceDesign** | Create voice from description | `generate_voice_design()` |
-
-This API uses CustomVoice by default and lazy-loads Base/VoiceDesign on first use.
-
-## Startup Times
-
-| Type | Time |
-|------|------|
-| Cold start (loading models) | ~45-60s |
-| Warm request (model loaded) | ~5s per sentence |
-
-## Tested
-
-- RTX 5060 Ti (Blackwell, 16GB VRAM) with CUDA 12.8 / PyTorch 2.7+
-
-## License
-
-Apache 2.0 (following Qwen3-TTS license)
+Licensed under **Apache 2.0**, following upstream and Qwen3-TTS. See [LICENSE](LICENSE).

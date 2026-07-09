@@ -9,8 +9,13 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.config import Config
-from app.tts_model import initialize_model
+from app.tts_model import initialize_model, infer_pool
 from app.api.router import api_router
+
+# Quiet transformers' per-generation chatter (e.g. the repeated
+# "Setting `pad_token_id` to `eos_token_id`" line). Uvicorn request logs are unaffected.
+import transformers
+transformers.logging.set_verbosity_error()
 
 
 ascii_art = r"""
@@ -33,6 +38,10 @@ async def lifespan(app: FastAPI):
     print(f"  Device: {Config.DEVICE}")
     print(f"  Dtype: {Config.DTYPE}")
     print()
+
+    # Route all `run_in_executor(None, ...)` generation calls onto the single
+    # dedicated inference thread, so they reuse the warmed-up compiled kernels.
+    asyncio.get_running_loop().set_default_executor(infer_pool)
 
     # Start model loading in background
     model_task = asyncio.create_task(initialize_model())

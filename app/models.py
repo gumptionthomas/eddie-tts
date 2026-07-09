@@ -15,6 +15,8 @@ class TTSRequest(BaseModel):
     speed: Optional[float] = Field(1.0, description="Speed multiplier (not yet supported)")
     language: Optional[str] = Field("English", description="Language for synthesis")
     instruct: Optional[str] = Field(None, description="Instruction for how the voice should speak")
+    seed: Optional[int] = Field(None, description="Random seed for reproducible synthesis (same seed -> identical audio)")
+    temperature: Optional[float] = Field(0.65, description="Sampling temperature; lower = steadier/flatter (narration), higher = more varied/expressive. Qwen default ~0.9.")
 
 
 class VoiceCloneRequest(BaseModel):
@@ -23,6 +25,8 @@ class VoiceCloneRequest(BaseModel):
     language: Optional[str] = Field("English", description="Language for synthesis")
     ref_text: Optional[str] = Field(None, description="Transcript of reference audio (improves quality)")
     x_vector_only: Optional[bool] = Field(False, description="Use speaker embedding only (faster, lower quality)")
+    seed: Optional[int] = Field(None, description="Random seed for reproducible synthesis (same seed -> identical audio)")
+    temperature: Optional[float] = Field(0.65, description="Sampling temperature; lower = steadier/flatter (narration), higher = more varied/expressive. Qwen default ~0.9.")
 
 
 class VoiceDesignRequest(BaseModel):
@@ -30,6 +34,8 @@ class VoiceDesignRequest(BaseModel):
     input: str = Field(..., description="Text to synthesize", min_length=1, max_length=5000)
     language: Optional[str] = Field("English", description="Language for synthesis")
     voice_description: str = Field(..., description="Natural language description of desired voice")
+    seed: Optional[int] = Field(None, description="Random seed for reproducible synthesis (same seed -> identical audio)")
+    temperature: Optional[float] = Field(0.65, description="Sampling temperature; lower = steadier run-to-run, higher = more varied. Qwen default ~0.9.")
 
 
 class VoiceInfo(BaseModel):

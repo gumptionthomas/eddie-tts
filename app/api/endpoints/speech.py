@@ -107,7 +107,9 @@ async def text_to_speech(request: TTSRequest):
                 text=request.input,
                 language=language,
                 speaker=voice,
-                instruct=request.instruct
+                instruct=request.instruct,
+                seed=request.seed,
+                temperature=request.temperature
             )
         )
 
@@ -149,7 +151,9 @@ async def text_to_speech_with_upload(
     language: Optional[str] = Form("English", description="Language for synthesis"),
     ref_text: Optional[str] = Form(None, description="Transcript of reference audio (improves quality)"),
     x_vector_only: Optional[bool] = Form(False, description="Use speaker embedding only (faster)"),
-    response_format: Optional[str] = Form("wav", description="Output format: wav, mp3")
+    response_format: Optional[str] = Form("wav", description="Output format: wav, mp3"),
+    seed: Optional[int] = Form(None, description="Random seed for reproducible synthesis (same seed -> identical audio)"),
+    temperature: Optional[float] = Form(0.65, description="Sampling temperature; lower = steadier/flatter (narration), higher = more varied/expressive. Qwen default ~0.9.")
 ):
     """Generate speech by cloning the uploaded voice"""
 
@@ -198,7 +202,9 @@ async def text_to_speech_with_upload(
                 ref_audio=temp_path,
                 language=language,
                 ref_text=ref_text,
-                x_vector_only=x_vector_only or False
+                x_vector_only=x_vector_only or False,
+                seed=seed,
+                temperature=temperature
             )
         )
 
@@ -276,7 +282,9 @@ async def text_to_speech_voice_design(request: VoiceDesignRequest):
             lambda: generate_voice_design(
                 text=request.input,
                 language=language,
-                voice_description=request.voice_description
+                voice_description=request.voice_description,
+                seed=request.seed,
+                temperature=request.temperature
             )
         )
 

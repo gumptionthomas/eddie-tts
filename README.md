@@ -1,4 +1,4 @@
-# eddie
+# eddie-tts
 
 > A local, **OpenAI-compatible Qwen3-TTS speech server** — FastAPI, with voice cloning,
 > voice design, reproducible seeds, and sampling temperature. Runs natively on
@@ -69,13 +69,13 @@ the server falls back to `attn_implementation="sdpa"`.
 
 ```bash
 # Ampere / Ada
-docker build -t eddie . && docker run -d --gpus all --network=host \
-  -v ~/.cache/huggingface:/cache -e PORT=4123 eddie
+docker build -t eddie-tts . && docker run -d --gpus all --network=host \
+  -v ~/.cache/huggingface:/cache -e PORT=4123 eddie-tts
 
 # Blackwell (RTX 50xx)
-docker build -f Dockerfile.blackwell -t eddie:blackwell . && docker run -d --gpus all \
+docker build -f Dockerfile.blackwell -t eddie-tts:blackwell . && docker run -d --gpus all \
   --network=host -v ~/.cache/huggingface:/cache -e PORT=4123 \
-  -e USE_FLASH_ATTENTION=false eddie:blackwell
+  -e USE_FLASH_ATTENTION=false eddie-tts:blackwell
 ```
 
 `--network=host` gives reliable DNS for HuggingFace downloads. A Proxmox LXC installer

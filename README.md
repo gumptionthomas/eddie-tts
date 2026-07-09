@@ -5,8 +5,8 @@
 > Windows + NVIDIA Blackwell (RTX 50-series) with `torch.compile`, and on Linux/Docker.
 > Text goes in, audio comes out. Nothing leaves your machine.
 
-*Eddie is the Heart of Gold's shipboard computer — the one that talks. He's the voice;
-[ZaphodVox](https://github.com/gumptionthomas/zaphodvox) is the one giving the orders.*
+> "Hi there. This is Eddie, your shipboard computer, and I'm feeling just great, guys, and
+> I know I'm just going to get a bundle of kicks out of any program you care to run through me."
 
 **Keywords:** Qwen3-TTS · text-to-speech · TTS server · speech synthesis · voice cloning ·
 voice design · OpenAI-compatible API · FastAPI · self-hosted · local-first · CUDA · Blackwell
@@ -23,6 +23,8 @@ It's a fork of [cornball-ai/qwen3-tts-api](https://github.com/cornball-ai/qwen3-
 generation controls upstream does not have.
 
 ### Why this fork exists
+
+> "I can see this relationship is something we're all going to have to work at."
 
 [ZaphodVox](https://github.com/gumptionthomas/zaphodvox), a CLI for encoding manuscripts
 into narrated audio, depends on both:

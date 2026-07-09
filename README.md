@@ -39,6 +39,9 @@ running ZaphodVox, run Eddie.** See [Changes from upstream](#changes-from-upstre
 
 ## Quick start
 
+> "Now this is going to be your first day on a strange planet, so I want you all to dress up
+> snug and warm and no playing with any naughty bug-eyed monsters!"
+
 ### Windows + Blackwell (native, no Docker)
 
 The path this fork is tuned for. See **[WINDOWS.md](WINDOWS.md)** for the full story
@@ -153,6 +156,9 @@ curl -X POST http://localhost:4123/v1/audio/speech/design \
 ---
 
 ## Generation parameters
+
+> "I can do that for you, sure... I can even work out your personality problems to ten
+> decimal places if it'll help."
 
 ### `seed` (int, optional)
 

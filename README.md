@@ -209,7 +209,8 @@ Per Apache 2.0 §4(b), the modifications in this fork:
   non-descriptive kernel names, static CUDA launcher disabled (32-bit pointer overflow).
 - **Single dedicated inference thread**, so compiled kernels are reused instead of
   recompiled per request.
-- **`windows/`** — PowerShell launch/stop scripts and a PowerShell cheat sheet.
+- **`windows/`** — PowerShell launch/stop scripts that set the whole Blackwell/Windows
+  environment (compile flags, inductor workarounds, `sdpa`, ffmpeg/sox on PATH).
 - Quieted the per-generation `pad_token_id` log line; prefer the local HF cache and
   disable the HuggingFace telemetry ping at startup.
 - Docs: examples use the actual default port `4123` (upstream's examples said `7811`).

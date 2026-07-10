@@ -48,10 +48,11 @@ Create a Python 3.12 venv, install cu128 PyTorch **first** (Blackwell needs sm_1
 kernels that cu121 lacks), then the package + `triton-windows>=3.5,<3.6` (3.7 is
 incompatible with torch 2.9). Set the env vars above and launch `main.py`.
 
-Convenience launch scripts (`start_server.ps1`, `stop_server.ps1`) and a PowerShell
-cheat sheet live in the parent working directory of this repo; they set all the env
-vars, resolve ffmpeg/sox from winget, bind `0.0.0.0:4123` for LAN access, and run the
-server in the foreground.
+Convenience launch scripts live in [`windows/`](windows/): run
+`.\windows\start_server.ps1` from the repo root. They set all the env vars above,
+resolve ffmpeg/sox from winget, bind `0.0.0.0:4123` for LAN access, and run the server
+in the foreground (`.\windows\stop_server.ps1` to kill it). The venv is auto-located —
+`$env:QWEN_TTS_VENV`, else `<repo>\.venv`, else the parent directory's `.venv`.
 
 ## API additions at a glance
 

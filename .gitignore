@@ -24,6 +24,12 @@ env/
 /cache/
 /voices/
 
+# Local-only tooling: personal to this machine, not part of the server.
+# (windows/start_server.ps1 and windows/stop_server.ps1 ARE tracked -- they carry
+# the Windows/Blackwell config this fork exists for.)
+windows/lmstudio-firewall.ps1
+windows/POWERSHELL_CHEATSHEET.md
+
 # OS
 .DS_Store
 Thumbs.db

@@ -12,9 +12,10 @@ env/
 *.egg-info/
 *.egg
 
-# IDE
+# IDE / tooling
 .vscode/
 .idea/
+.claude/
 *.swp
 *.swo
 

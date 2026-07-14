@@ -1,4 +1,4 @@
-# Starts the Qwen3-TTS server on Windows + RTX 50-series (Blackwell), no Docker.
+# Starts the eddie-tts server on Windows + RTX 50-series (Blackwell), no Docker.
 # Usage:  powershell -ExecutionPolicy Bypass -File .\windows\start_server.ps1
 #
 # This script lives in <repo>\windows\. It runs the server from the repo root and
@@ -58,7 +58,7 @@ New-Item -ItemType Directory -Force -Path "C:\ti" | Out-Null
 Write-Host "python: $vpy"
 Write-Host "sox   : $soxDir"
 Write-Host "ffmpeg: $ffDir"
-Write-Host "Starting Qwen3-TTS on http://$($env:HOST):$($env:PORT)  (Ctrl+C to stop)"
+Write-Host "Starting eddie-tts on http://$($env:HOST):$($env:PORT)  (Ctrl+C to stop)"
 # Run from the repo dir so `main.py`'s `app` package imports resolve, but restore
 # the caller's location afterward -- including on Ctrl+C (finally still runs), so
 # stopping the server doesn't leave your shell stranded inside the repo.

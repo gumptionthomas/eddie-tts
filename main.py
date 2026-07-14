@@ -1,5 +1,5 @@
 """
-Entry point for Qwen3-TTS API server
+Entry point for the eddie-tts API server
 
 Environment variables:
   ENABLE_GRADIO=true  - Launch Gradio UI instead of API

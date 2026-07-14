@@ -1,12 +1,15 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# qwen3-tts-api LXC installer for Proxmox
-# Usage: bash -c "$(curl -fsSL https://raw.githubusercontent.com/cornball-ai/qwen3-tts-api/main/install-lxc.sh)"
+# eddie-tts LXC installer for Proxmox
+# Usage: bash -c "$(curl -fsSL https://raw.githubusercontent.com/gumptionthomas/eddie-tts/main/install-lxc.sh)"
 # Run this on the Proxmox host.
 
-PORT="${QWEN3_PORT:-7811}"
-REPO_URL="https://github.com/cornball-ai/qwen3-tts-api.git"
+# QWEN3_PORT is the pre-rename name, still honored so existing invocations keep working.
+PORT="${EDDIE_TTS_PORT:-${QWEN3_PORT:-7811}}"
+REPO_URL="https://github.com/gumptionthomas/eddie-tts.git"
+CONTAINER="eddie-tts"
+LEGACY_CONTAINER="qwen3-tts-api"
 TEMPLATE_NAME="ubuntu-24.04-standard_24.04-2_amd64.tar.zst"
 
 # --- Colors ---
@@ -25,14 +28,14 @@ ok()    { echo -e "${GREEN}[OK]${NC} $*"; }
 # --- Banner ---
 echo -e "${BOLD}"
 echo "  +=============================================+"
-echo "  |        qwen3-tts-api  (LXC Install)        |"
+echo "  |         eddie-tts  (LXC Install)           |"
 echo "  |     GPU Text-to-Speech in Proxmox LXC      |"
 echo "  +=============================================+"
 echo -e "${NC}"
 echo "This will create a Proxmox LXC container with:"
 echo "  - NVIDIA GPU passthrough"
 echo "  - Docker + nvidia-container-toolkit"
-echo "  - Qwen3-TTS API server on port $PORT"
+echo "  - eddie-tts API server (Qwen3-TTS) on port $PORT"
 echo ""
 
 # --- Check Proxmox host ---
@@ -93,7 +96,7 @@ fi
 # --- Create container ---
 info "Creating LXC container $CTID..."
 pct create "$CTID" "$TEMPLATE" \
-    --hostname "qwen3-tts" \
+    --hostname "eddie-tts" \
     --memory 8192 \
     --cores 4 \
     --rootfs "${STORAGE}:20" \
@@ -213,12 +216,12 @@ info "Verifying Docker GPU access..."
 pct exec "$CTID" -- docker run --rm --gpus all nvidia/cuda:12.8.1-base-ubuntu22.04 nvidia-smi
 ok "Docker GPU access verified"
 
-# --- Clone and build qwen3-tts-api ---
-info "Cloning qwen3-tts-api..."
+# --- Clone and build eddie-tts ---
+info "Cloning eddie-tts..."
 pct exec "$CTID" -- bash -c "
     set -euo pipefail
     apt-get install -y -qq git >/dev/null 2>&1
-    git clone '$REPO_URL' /opt/qwen3-tts-api
+    git clone '$REPO_URL' /opt/$CONTAINER
 "
 ok "Repository cloned"
 
@@ -232,7 +235,7 @@ else
 fi
 
 info "Building Docker image (this takes several minutes)..."
-pct exec "$CTID" -- docker build -t qwen3-tts-api:latest -f "/opt/qwen3-tts-api/$DOCKERFILE" /opt/qwen3-tts-api
+pct exec "$CTID" -- docker build -t "$CONTAINER:latest" -f "/opt/$CONTAINER/$DOCKERFILE" "/opt/$CONTAINER"
 ok "Docker image built"
 
 # --- Model Downloads ---
@@ -282,22 +285,30 @@ case "${MODEL_CHOICE:-3}" in
         ;;
 esac
 
-# --- Run qwen3-tts-api ---
-info "Starting qwen3-tts-api on port $PORT..."
-pct exec "$CTID" -- docker run -d --gpus all --network=host --name qwen3-tts-api \
+# --- Run eddie-tts ---
+# Clear out a pre-rename container/service, which would otherwise still hold the port.
+pct exec "$CTID" -- bash -c "
+    systemctl disable --now $LEGACY_CONTAINER 2>/dev/null || true
+    rm -f /etc/systemd/system/$LEGACY_CONTAINER.service
+    docker rm -f $LEGACY_CONTAINER 2>/dev/null || true
+    systemctl daemon-reload
+"
+
+info "Starting $CONTAINER on port $PORT..."
+pct exec "$CTID" -- docker run -d --gpus all --network=host --name "$CONTAINER" \
     -v /root/.cache/huggingface:/cache \
     -e "PORT=$PORT" \
     -e USE_FLASH_ATTENTION=false \
     -e LOCAL_FILES_ONLY=true \
     --restart unless-stopped \
-    qwen3-tts-api:latest
+    "$CONTAINER:latest"
 ok "Container started"
 
 # --- Create systemd service ---
 info "Creating systemd service for auto-start..."
-pct exec "$CTID" -- bash -c "cat > /etc/systemd/system/qwen3-tts-api.service <<'UNIT'
+pct exec "$CTID" -- bash -c "cat > /etc/systemd/system/$CONTAINER.service <<'UNIT'
 [Unit]
-Description=Qwen3-TTS API Server
+Description=eddie-tts API Server
 After=docker.service
 Requires=docker.service
 
@@ -305,21 +316,21 @@ Requires=docker.service
 Type=simple
 Restart=always
 RestartSec=10
-ExecStartPre=-/usr/bin/docker rm -f qwen3-tts-api
-ExecStart=/usr/bin/docker run --rm --gpus all --network=host --name qwen3-tts-api \
+ExecStartPre=-/usr/bin/docker rm -f $CONTAINER
+ExecStart=/usr/bin/docker run --rm --gpus all --network=host --name $CONTAINER \
     -v /root/.cache/huggingface:/cache \
     -e PORT=${PORT} \
     -e USE_FLASH_ATTENTION=false \
     -e LOCAL_FILES_ONLY=true \
-    qwen3-tts-api:latest
-ExecStop=/usr/bin/docker stop qwen3-tts-api
+    $CONTAINER:latest
+ExecStop=/usr/bin/docker stop $CONTAINER
 
 [Install]
 WantedBy=multi-user.target
 UNIT
 
 systemctl daemon-reload
-systemctl enable qwen3-tts-api
+systemctl enable $CONTAINER
 "
 ok "Systemd service created and enabled"
 
@@ -350,8 +361,8 @@ echo "      -d '{\"input\": \"Hello world\", \"voice\": \"Vivian\"}' \\"
 echo "      --output hello.wav"
 echo ""
 echo "  Manage:"
-echo "    pct exec $CTID -- docker logs -f qwen3-tts-api    # logs"
-echo "    pct exec $CTID -- systemctl restart qwen3-tts-api  # restart"
+echo "    pct exec $CTID -- docker logs -f $CONTAINER    # logs"
+echo "    pct exec $CTID -- systemctl restart $CONTAINER  # restart"
 echo "    pct stop $CTID                                      # stop container"
 echo "    pct start $CTID                                     # start container"
 echo ""

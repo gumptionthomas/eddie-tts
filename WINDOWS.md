@@ -52,7 +52,8 @@ Convenience launch scripts live in [`windows/`](windows/): run
 `.\windows\start_server.ps1` from the repo root. They set all the env vars above,
 resolve ffmpeg/sox from winget, bind `0.0.0.0:4123` for LAN access, and run the server
 in the foreground (`.\windows\stop_server.ps1` to kill it). The venv is auto-located —
-`$env:QWEN_TTS_VENV`, else `<repo>\.venv`, else the parent directory's `.venv`.
+`$env:EDDIE_TTS_VENV` (or the pre-rename `$env:QWEN_TTS_VENV`), else `<repo>\.venv`,
+else the parent directory's `.venv`.
 
 ## API additions at a glance
 

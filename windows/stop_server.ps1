@@ -1,4 +1,4 @@
-# Stops the Qwen3-TTS server: kills whatever is listening on port 4123
+# Stops the eddie-tts server: kills whatever is listening on port 4123
 # plus any python process running main.py (covers the parent+worker pair).
 $port = 4123
 $killed = @()

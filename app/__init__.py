@@ -1,1 +1,1 @@
-# qwen3-tts-api
+# eddie-tts

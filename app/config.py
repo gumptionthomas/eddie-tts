@@ -1,5 +1,5 @@
 """
-Configuration for Qwen3-TTS API
+Configuration for the eddie-tts API
 """
 
 import os

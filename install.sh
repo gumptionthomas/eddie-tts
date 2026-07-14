@@ -1,11 +1,14 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# qwen3-tts-api one-liner installer
-# Usage: bash -c "$(curl -fsSL https://raw.githubusercontent.com/cornball-ai/qwen3-tts-api/main/install.sh)"
+# eddie-tts one-liner installer
+# Usage: bash -c "$(curl -fsSL https://raw.githubusercontent.com/gumptionthomas/eddie-tts/main/install.sh)"
 
-PORT="${QWEN3_PORT:-7811}"
-WORK_DIR="$HOME/qwen3-tts-api"
+# QWEN3_PORT is the pre-rename name, still honored so existing invocations keep working.
+PORT="${EDDIE_TTS_PORT:-${QWEN3_PORT:-7811}}"
+WORK_DIR="$HOME/eddie-tts"
+CONTAINER="eddie-tts"
+LEGACY_CONTAINER="qwen3-tts-api"
 
 # --- Colors ---
 RED='\033[0;31m'
@@ -23,12 +26,12 @@ ok()    { echo -e "${GREEN}[OK]${NC} $*"; }
 # --- Banner ---
 echo -e "${BOLD}"
 echo "  ╔═══════════════════════════════════════════╗"
-echo "  ║            qwen3-tts-api                  ║"
+echo "  ║               eddie-tts                   ║"
 echo "  ║     GPU Text-to-Speech API Server         ║"
 echo "  ╚═══════════════════════════════════════════╝"
 echo -e "${NC}"
 echo "This will install:"
-echo "  - Qwen3-TTS API server on port $PORT"
+echo "  - eddie-tts API server (Qwen3-TTS) on port $PORT"
 echo "  - 9 built-in voices, voice cloning, voice design"
 echo "  - OpenAI-compatible REST API"
 echo ""
@@ -81,19 +84,19 @@ GPU_TYPE=$(detect_gpu_type)
 
 # --- Clone repo ---
 if [ -d "$WORK_DIR" ]; then
-    info "qwen3-tts-api already exists, pulling latest..."
+    info "eddie-tts already exists, pulling latest..."
     git -C "$WORK_DIR" pull --ff-only 2>/dev/null || warn "Could not pull (may have local changes)"
 else
-    info "Cloning qwen3-tts-api..."
-    git clone "https://github.com/cornball-ai/qwen3-tts-api.git" "$WORK_DIR"
+    info "Cloning eddie-tts..."
+    git clone "https://github.com/gumptionthomas/eddie-tts.git" "$WORK_DIR"
 fi
 
 # --- Build image ---
-info "Building qwen3-tts-api image..."
+info "Building $CONTAINER image..."
 if [ "$GPU_TYPE" = "blackwell" ]; then
-    docker build -t qwen3-tts-api:latest -f "$WORK_DIR/Dockerfile.blackwell" "$WORK_DIR"
+    docker build -t "$CONTAINER:latest" -f "$WORK_DIR/Dockerfile.blackwell" "$WORK_DIR"
 else
-    docker build -t qwen3-tts-api:latest -f "$WORK_DIR/Dockerfile" "$WORK_DIR"
+    docker build -t "$CONTAINER:latest" -f "$WORK_DIR/Dockerfile" "$WORK_DIR"
 fi
 ok "Image built"
 
@@ -149,27 +152,30 @@ case "$MODEL_CHOICE" in
 esac
 
 # --- Stop existing container ---
-if docker ps -a --format '{{.Names}}' | grep -q '^qwen3-tts-api$'; then
-    info "Stopping existing qwen3-tts-api container..."
-    docker rm -f qwen3-tts-api
-fi
+# LEGACY_CONTAINER is the pre-rename name; a leftover one would still hold the port.
+for name in "$CONTAINER" "$LEGACY_CONTAINER"; do
+    if docker ps -a --format '{{.Names}}' | grep -q "^${name}$"; then
+        info "Stopping existing $name container..."
+        docker rm -f "$name"
+    fi
+done
 
 # --- Run ---
-info "Starting qwen3-tts-api on port $PORT..."
-docker run -d --gpus all --network=host --name qwen3-tts-api \
+info "Starting $CONTAINER on port $PORT..."
+docker run -d --gpus all --network=host --name "$CONTAINER" \
     -v "$HOME/.cache/huggingface:/cache" \
     -e "PORT=$PORT" \
     -e USE_FLASH_ATTENTION=false \
     -e LOCAL_FILES_ONLY=true \
     --restart unless-stopped \
-    qwen3-tts-api:latest
+    "$CONTAINER:latest"
 
 echo ""
 echo -e "${GREEN}${BOLD}  ╔═══════════════════════════════════════════╗"
 echo "  ║             Setup complete                ║"
 echo "  ╚═══════════════════════════════════════════╝${NC}"
 echo ""
-echo "  qwen3-tts API:   http://localhost:$PORT"
+echo "  eddie-tts API:   http://localhost:$PORT"
 echo "  Health check:    curl http://localhost:$PORT/health"
 echo "  List voices:     curl http://localhost:$PORT/v1/voices"
 echo ""
@@ -180,9 +186,9 @@ echo "      -d '{\"input\": \"Hello world\", \"voice\": \"Vivian\"}' \\"
 echo "      --output hello.wav"
 echo ""
 echo "  Manage:"
-echo "    docker logs -f qwen3-tts-api    # logs"
-echo "    docker restart qwen3-tts-api    # restart"
-echo "    docker rm -f qwen3-tts-api      # remove"
+echo "    docker logs -f $CONTAINER    # logs"
+echo "    docker restart $CONTAINER    # restart"
+echo "    docker rm -f $CONTAINER      # remove"
 echo ""
 echo "  Note: Takes ~1-2 minutes to load models on first start."
 echo ""

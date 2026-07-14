@@ -27,7 +27,7 @@ async def health_check():
 async def root():
     """Root endpoint"""
     return {
-        "name": "Qwen3-TTS API",
+        "name": "eddie-tts API",
         "version": "1.0.0",
         "status": "ok" if is_model_loaded() else "initializing"
     }

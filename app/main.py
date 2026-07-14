@@ -1,5 +1,5 @@
 """
-Main FastAPI application for Qwen3-TTS API
+Main FastAPI application for the eddie-tts API
 """
 
 import asyncio
@@ -19,11 +19,11 @@ transformers.logging.set_verbosity_error()
 
 
 ascii_art = r"""
-  ___                 _____     _____ _____ ____
- / _ \__      _____ _|___ /    |_   _|_   _/ ___|
-| | | \ \ /\ / / _ \ '_ \| |___  | |   | | \___ \
-| |_| |\ V  V /  __/ | | |___ \ | |   | |  ___) |
- \__\_\ \_/\_/ \___|_| |_|____/ |_|   |_| |____/
+          _     _ _            _   _
+  ___  __| | __| (_) ___      | |_| |_ ___
+ / _ \/ _` |/ _` | |/ _ \_____| __| __/ __|
+|  __/ (_| | (_| | |  __/_____| |_| |_\__ \
+ \___|\__,_|\__,_|_|\___|      \__|\__|___/
 
 """
 
@@ -33,7 +33,7 @@ async def lifespan(app: FastAPI):
     """Application lifespan management"""
     # Startup
     print(ascii_art)
-    print("Qwen3-TTS API Server")
+    print("eddie-tts API Server")
     print(f"  Model: {Config.MODEL_NAME}")
     print(f"  Device: {Config.DEVICE}")
     print(f"  Dtype: {Config.DTYPE}")
@@ -59,7 +59,7 @@ async def lifespan(app: FastAPI):
 
 # Create FastAPI app
 app = FastAPI(
-    title="Qwen3-TTS API",
+    title="eddie-tts API",
     description="REST API for Qwen3-TTS with OpenAI-compatible endpoints",
     version="1.0.0",
     docs_url="/docs",

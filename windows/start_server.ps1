@@ -3,14 +3,17 @@
 #
 # This script lives in <repo>\windows\. It runs the server from the repo root and
 # auto-locates the Python venv. Venv search order:
-#   1. $env:QWEN_TTS_VENV                (explicit override -- full path to python.exe)
-#   2. <repo>\.venv\Scripts\python.exe   (venv created inside the repo)
-#   3. <repo>\..\.venv\Scripts\python.exe (venv in the parent working dir)
+#   1. $env:EDDIE_TTS_VENV               (explicit override -- full path to python.exe)
+#   2. $env:QWEN_TTS_VENV                (pre-rename name for the same override)
+#   3. <repo>\.venv\Scripts\python.exe   (venv created inside the repo)
+#   4. <repo>\..\.venv\Scripts\python.exe (venv in the parent working dir)
 $ErrorActionPreference = "Stop"
 $repo = Split-Path $PSScriptRoot        # <repo> (contains main.py, app/)
 
 function Resolve-VenvPython {
-    if ($env:QWEN_TTS_VENV -and (Test-Path $env:QWEN_TTS_VENV)) { return $env:QWEN_TTS_VENV }
+    foreach ($o in @($env:EDDIE_TTS_VENV, $env:QWEN_TTS_VENV)) {
+        if ($o -and (Test-Path $o)) { return $o }
+    }
     $candidates = @(
         (Join-Path $repo ".venv\Scripts\python.exe"),
         (Join-Path (Split-Path $repo) ".venv\Scripts\python.exe")
@@ -20,7 +23,7 @@ function Resolve-VenvPython {
 }
 $vpy = Resolve-VenvPython
 if (-not $vpy) {
-    Write-Error "No venv python found. Create a venv (.venv in the repo root) or set QWEN_TTS_VENV to python.exe."
+    Write-Error "No venv python found. Create a venv (.venv in the repo root) or set EDDIE_TTS_VENV to python.exe."
     exit 1
 }
 

@@ -39,5 +39,8 @@ if __name__ == "__main__":
             host=Config.HOST,
             port=Config.PORT,
             reload=False,
-            workers=1  # Single worker for GPU model
+            workers=1,  # Single worker for GPU model
+            # Without this, shutdown waits forever on a client that stalls mid-request
+            # or stops reading its response.
+            timeout_graceful_shutdown=5
         )
